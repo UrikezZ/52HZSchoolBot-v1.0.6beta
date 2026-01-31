@@ -2,9 +2,9 @@
 from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters
 from config import is_teacher, get_birthday_info, get_user_role
-from database import get_all_users, get_confirmed_lessons, get_schedule_request, get_user
+from database import get_all_users, get_confirmed_lessons, get_user
 from keyboards.main_menu import show_main_menu
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # Обработчики для преподавателя
@@ -112,7 +112,8 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
                     lesson_datetime = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
 
                     # ФИЛЬТРАЦИЯ: пропускаем прошедшие занятия ← ДОБАВЛЕНО!
-                    if lesson_datetime < now:
+                    lesson_end_time = lesson_datetime + timedelta(hours=1)  # занятие длится 1 час
+                    if lesson_end_time < now:
                         continue  # ← Пропускаем прошедшие занятия!
 
                 else:
@@ -349,7 +350,6 @@ async def show_upcoming_birthdays(update: Update, context: ContextTypes.DEFAULT_
         )
 
     await update.message.reply_text(message, parse_mode='Markdown')
-
 
 # Регистрируем обработчики для преподавателя
 teacher_handlers = [

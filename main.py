@@ -1,8 +1,5 @@
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, \
-    ConversationHandler, ContextTypes
-from datetime import datetime, time
-import pytz
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 from config import BOT_TOKEN, cleanup_weekly_requests
 from handlers.start import start, help_command, profile_command
 from handlers.main_handler import main_message_handler_obj
@@ -51,7 +48,6 @@ def main():
     application.add_handler(teacher_chat_conversation)
     application.add_handler(student_management_conversation)
 
-
     application.add_handler(MessageHandler(filters.Regex("^🎂 Дни рождения$"), show_upcoming_birthdays))
 
     # 2. Команды
@@ -67,7 +63,7 @@ def main():
     # 4. CallbackQueryHandler из balance.py
     from handlers.balance import (
         select_student, handle_action_choice, show_student_statistics,
-        charge_lesson, cancel_balance_management, handle_balance_input
+        charge_lesson, cancel_balance_management
     )
 
     application.add_handler(CallbackQueryHandler(select_student, pattern="^balance_select_"))
@@ -131,6 +127,7 @@ def main():
         print("   • О занятиях: каждый день в 15:00 по Москве")
         print("   • О днях рождения: каждый день в 10:00 по Москве")
         print("   • Очистка заявок: каждый понедельник в 8:00")
+        print("   • Очистка занятий: каждый день в 03:05 (храним 30 дней)")
         print("=" * 50)
 
     else:

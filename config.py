@@ -1,6 +1,6 @@
-# config.py
 import os
 from datetime import datetime, timedelta
+from telegram.ext import ContextTypes
 from dotenv import load_dotenv
 from database import (
     get_user, save_user, get_all_users,
@@ -457,3 +457,99 @@ async def cleanup_weekly_requests(context):
             )
         except Exception as e:
             print(f"ERROR sending cleanup notification: {e}")
+
+
+def cleanup_past_lessons(days_to_keep=30):
+    """
+    Очищает прошедшие занятия старше указанного количества дней.
+    По умолчанию храним занятия за последние 30 дней.
+    Возвращает количество удаленных занятий.
+    """
+    from datetime import datetime, timedelta
+    from database import delete_confirmed_lesson
+
+    print(f"🧹 Начинаю очистку занятий старше {days_to_keep} дней...")
+
+    all_lessons = get_confirmed_lessons()
+    removed_count = 0
+    now = datetime.now()
+
+    for lesson in all_lessons:
+        try:
+            # Извлекаем дату из названия занятия
+            slot_name = lesson.get('slot_name', '')
+            if not slot_name:
+                continue
+
+            # Пропускаем ручные списания уроков
+            if 'Ручное списание' in slot_name:
+                continue
+
+            parts = slot_name.split()
+            date_str = None
+            time_str = None
+
+            for part in parts:
+                if '.' in part and len(part.split('.')) == 3:
+                    date_str = part
+                    break
+
+            if date_str:
+                # Пытаемся найти время (не обязательно)
+                for part in parts:
+                    if ':' in part and len(part.split(':')) == 2:
+                        time_str = part
+                        break
+
+                if time_str:
+                    lesson_datetime = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
+                else:
+                    # Если время не найдено, считаем начало дня
+                    lesson_datetime = datetime.strptime(date_str, "%d.%m.%Y")
+
+                # Удаляем, если занятие прошло более X дней назад
+                if lesson_datetime < (now - timedelta(days=days_to_keep)):
+                    delete_confirmed_lesson(lesson['id'])
+                    removed_count += 1
+                    print(f"🧹 Удалено старое занятие: {slot_name}")
+
+        except Exception as e:
+            print(f"⚠️ Ошибка при обработке занятия ID {lesson.get('id')}: {e}")
+            continue
+
+    print(f"✅ Очистка завершена. Удалено {removed_count} прошедших занятий")
+    return removed_count
+
+
+async def cleanup_past_lessons_job(context: ContextTypes.DEFAULT_TYPE):
+    """Задача для JobQueue - автоматическая очистка прошедших занятий"""
+    try:
+        print("=" * 50)
+        print("🧹 Запуск автоматической очистки прошедших занятий...")
+
+        removed_count = cleanup_past_lessons(days_to_keep=30)
+
+        # Логируем результат
+        if removed_count > 0:
+            print(f"✅ Удалено {removed_count} прошедших занятий")
+
+            # Мягкое уведомление преподавателя (только если удалили много)
+            if removed_count >= 10 and TEACHER_IDS:
+                try:
+                    await context.bot.send_message(
+                        chat_id=TEACHER_IDS[0],
+                        text=f"🧹 *Автоматическая очистка расписания*\n\n"
+                             f"Удалено {removed_count} прошедших занятий "
+                             f"(старше 30 дней).",
+                        parse_mode='Markdown'
+                    )
+                except Exception as e:
+                    print(f"⚠️ Не удалось уведомить преподавателя: {e}")
+        else:
+            print("ℹ️ Нечего очищать")
+
+        print("✅ Автоматическая очистка завершена")
+        print("=" * 50)
+
+    except Exception as e:
+        print(f"❌ Ошибка в задаче очистки: {e}")
