@@ -121,7 +121,7 @@ async def show_day_selection(update: Update, context: ContextTypes.DEFAULT_TYPE,
     day_info = week_dates[day_index]
     keyboard.append([InlineKeyboardButton(f"📅 {day_info['day_name']} {day_info['date']}", callback_data="ignore")])
 
-    # Показываем слоты времени для выбранного дня (13:00-21:00)
+    # Показываем слоты времени для выбранного дня (13:00-22:00)
     time_slots, _ = get_day_slots(day_index)
     time_row = []
     slot_items = list(time_slots.items())
@@ -183,7 +183,7 @@ async def show_day_selection(update: Update, context: ContextTypes.DEFAULT_TYPE,
     message_text = (
         f"📅 *Выберите удобные время на неделю {week_range} (Среда-Воскресенье):*\n\n"
         f"• Дни: Ср, Чт, Пт, Сб, Вс\n"
-        f"• Время: 13:00 - 21:00\n"
+        f"• Время: 13:00 - 22:00\n"
         f"• Нажимайте на дни чтобы выбрать время\n"
         f"• ⛔ - время уже занято\n"
         f"• ✅ - ваши выбранные время\n"
